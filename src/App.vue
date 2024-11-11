@@ -91,7 +91,17 @@ onMounted(() => {
 
 <style scoped>
 h1 {
-  display: block;
+  font-size: 2em;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
 }
 
 .linha {
@@ -104,7 +114,12 @@ h1 {
 }
 
 button {
-  margin-left: 10px;
+  background-color: #ff4d4d;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 button:hover {
