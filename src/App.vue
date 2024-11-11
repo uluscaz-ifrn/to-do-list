@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+import { db } from './firebaseConfig'
+import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore'
 
 const tarefa = ref('')
 const lista = ref<Tarefa[]>([])
@@ -9,25 +11,61 @@ type Tarefa = {
   feito: boolean
   nome: string
 }
-function cadastrarTarefa(evento: Event) {
-  evento.preventDefault()
-  lista.value.push({
-    codigo: incremento,
-    nome: tarefa.value,
-    feito: false,
+
+async function carregarTarefas() {
+  const querySnapshot = await getDocs(collection(db, 'tarefas'))
+  querySnapshot.forEach((doc) => {
+    const data = doc.data() as Tarefa
+    lista.value.push({
+      codigo: data.codigo,
+      nome: data.nome,
+      feito: data.feito,
+    })
+    incremento = Math.max(incremento, data.codigo + 1)
   })
-  incremento++
-  tarefa.value = ''
 }
-function removerTarefa(codigo: number) {
+
+async function cadastrarTarefa(evento: Event) {
+  evento.preventDefault()
+  try {
+    const docRef = await addDoc(collection(db, 'tarefas'), {
+      codigo: incremento,
+      nome: tarefa.value,
+      feito: false,
+    })
+    lista.value.push({
+      codigo: incremento,
+      nome: tarefa.value,
+      feito: false,
+    })
+    incremento++
+    tarefa.value = ''
+    console.log("Documento escrito com ID: ", docRef.id)
+  } catch (e) {
+    console.error("Erro ao adicionar documento: ", e)
+  }
+}
+
+async function removerTarefa(codigo: number) {
   const confirmacao = confirm('Deseja realmente excluir?')
   if (confirmacao) {
-    lista.value = lista.value.filter(i => i.codigo != codigo)
+    try {
+      const tarefaDoc = lista.value.find(i => i.codigo === codigo)
+      if (tarefaDoc) {
+        await deleteDoc(doc(db, 'tarefas', tarefaDoc.codigo.toString()))
+        lista.value = lista.value.filter(i => i.codigo != codigo)
+      }
+    } catch (e) {
+      console.error("Erro ao remover documento: ", e)
+    }
   }
 }
 
 const naoConcluido = computed(() => lista.value.filter(i => !i.feito))
-const concluido = computed(() => lista.value.filter(i => i.feito))
+
+onMounted(() => {
+  carregarTarefas()
+})
 </script>
 
 <template>
