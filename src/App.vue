@@ -1,72 +1,103 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
-import { db } from './firebaseConfig'
-import { collection, addDoc, getDocs, deleteDoc, doc } from 'firebase/firestore'
+import { ref, computed, onMounted } from 'vue'
+import { initializeApp } from 'firebase/app'
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore'
 
-const tarefa = ref('')
-const lista = ref<Tarefa[]>([])
-let incremento = 0
+// Configuração do Firebase
+const firebaseConfig = {
+  // Insira aqui suas credenciais do Firebase
+  apiKey: "AIzaSyCVLDzvzlC8WvwaLQHH7EhB49Q0oz8htFg",
+  authDomain: "vue-to-do-86986.firebaseapp.com",
+  projectId: "vue-to-do-86986",
+  storageBucket: "vue-to-do-86986.firebasestorage.app",
+  messagingSenderId: "200873703587",
+  appId: "1:200873703587:web:66523813024d736a116716"
+}
+
+// Inicializa o Firebase
+const app = initializeApp(firebaseConfig)
+const db = getFirestore(app)
+
+//criando um novo tipo para representar a Tarefa
 type Tarefa = {
   codigo: number
-  feito: boolean
   nome: string
+  feito: boolean
+  id?: string // ID do documento no Firestore
 }
 
-async function carregarTarefas() {
-  const querySnapshot = await getDocs(collection(db, 'tarefas'))
-  querySnapshot.forEach((doc) => {
-    const data = doc.data() as Tarefa
-    lista.value.push({
-      codigo: data.codigo,
-      nome: data.nome,
-      feito: data.feito,
-    })
-    incremento = Math.max(incremento, data.codigo + 1)
+let incremento = 0
+const tarefa = ref('')
+const lista = ref<Tarefa[]>([])
+
+// Carregar tarefas do Firestore ao iniciar
+onMounted(async () => {
+  // Observa mudanças em tempo real
+  onSnapshot(collection(db, 'tarefas'), (snapshot) => {
+    lista.value = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as Tarefa[]
+
+    // Atualiza o incremento para o maior código + 1
+    incremento = Math.max(...lista.value.map(t => t.codigo), -1) + 1
   })
-}
+})
+
+const concluido = computed(() => {
+  return lista.value.filter(i => i.feito)
+})
+
+const naoConcluido = computed(() => {
+  return lista.value.filter(i => !i.feito)
+})
 
 async function cadastrarTarefa(evento: Event) {
   evento.preventDefault()
+
+  // Verifica se o campo tarefa está vazio
+  if (!tarefa.value.trim()) {
+    return
+  }
+
+  const novaTarefa = {
+    codigo: incremento,
+    nome: tarefa.value,
+    feito: false,
+  }
+
   try {
-    const docRef = await addDoc(collection(db, 'tarefas'), {
-      codigo: incremento,
-      nome: tarefa.value,
-      feito: false,
-    })
-    lista.value.push({
-      codigo: incremento,
-      nome: tarefa.value,
-      feito: false,
-    })
+    // Adiciona ao Firestore
+    await addDoc(collection(db, 'tarefas'), novaTarefa)
     incremento++
     tarefa.value = ''
-    console.log("Documento escrito com ID: ", docRef.id)
-  } catch (e) {
-    console.error("Erro ao adicionar documento: ", e)
+  } catch (erro) {
+    console.error('Erro ao cadastrar tarefa:', erro)
   }
 }
 
 async function removerTarefa(codigo: number) {
-  const confirmacao = confirm('Deseja realmente excluir?')
-  if (confirmacao) {
-    try {
-      const tarefaDoc = lista.value.find(i => i.codigo === codigo)
-      if (tarefaDoc) {
-        await deleteDoc(doc(db, 'tarefas', tarefaDoc.codigo.toString()))
-        lista.value = lista.value.filter(i => i.codigo != codigo)
-      }
-    } catch (e) {
-      console.error("Erro ao remover documento: ", e)
+  try {
+    const tarefaParaRemover = lista.value.find(t => t.codigo === codigo)
+    if (tarefaParaRemover?.id) {
+      await deleteDoc(doc(db, 'tarefas', tarefaParaRemover.id))
     }
+  } catch (erro) {
+    console.error('Erro ao remover tarefa:', erro)
   }
 }
 
-const naoConcluido = computed(() => lista.value.filter(i => !i.feito))
-const concluido = computed(() => lista.value.filter(i => i.feito))
-
-onMounted(() => {
-  carregarTarefas()
-})
+async function atualizarStatus(item: Tarefa) {
+  try {
+    if (item.id) {
+      await updateDoc(doc(db, 'tarefas', item.id), {
+        feito: item.feito
+      })
+    }
+  } catch (erro) {
+    console.error('Erro ao atualizar status:', erro)
+  }
+}
 </script>
 
 <template>
