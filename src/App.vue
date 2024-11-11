@@ -62,6 +62,7 @@ async function removerTarefa(codigo: number) {
 }
 
 const naoConcluido = computed(() => lista.value.filter(i => !i.feito))
+const concluido = computed(() => lista.value.filter(i => i.feito))
 
 onMounted(() => {
   carregarTarefas()
