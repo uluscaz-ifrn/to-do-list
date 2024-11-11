@@ -1,22 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { initializeApp } from 'firebase/app'
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore'
-
-// Configuração do Firebase
-const firebaseConfig = {
-  // Insira aqui suas credenciais do Firebase
-  apiKey: "AIzaSyCVLDzvzlC8WvwaLQHH7EhB49Q0oz8htFg",
-  authDomain: "vue-to-do-86986.firebaseapp.com",
-  projectId: "vue-to-do-86986",
-  storageBucket: "vue-to-do-86986.firebasestorage.app",
-  messagingSenderId: "200873703587",
-  appId: "1:200873703587:web:66523813024d736a116716"
-}
-
-// Inicializa o Firebase
-const app = initializeApp(firebaseConfig)
-const db = getFirestore(app)
+import { db } from './firebaseConfig'
+import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, onSnapshot } from 'firebase/firestore'
 
 //criando um novo tipo para representar a Tarefa
 type Tarefa = {
